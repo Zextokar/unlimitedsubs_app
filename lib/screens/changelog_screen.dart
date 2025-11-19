@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
-
 import '../services/changelog_service.dart';
 import '../services/app_version_provider.dart';
 
@@ -12,10 +11,12 @@ class ChangelogScreen extends ConsumerWidget {
   const ChangelogScreen({super.key});
 
   Future<void> _launchUrl(BuildContext context, String urlString) async {
-    final Uri url = Uri.parse(urlString);
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
+    try {
+      final Uri url = Uri.parse(urlString);
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        throw 'Could not launch $urlString';
+      }
+    } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -28,6 +29,20 @@ class ChangelogScreen extends ConsumerWidget {
     }
   }
 
+  // --- ¡FUNCIÓN DE LIMPIEZA NUEVA! ---
+  // Esta función elimina la 'v', los espacios y cualquier cosa después del '+'
+  String _cleanVersion(String version) {
+    // 1. Quita la 'v' o 'V'
+    String clean = version.replaceAll(RegExp(r'[vV]'), '');
+    // 2. Quita el número de compilación (ej: 1.0.0+2 -> 1.0.0)
+    if (clean.contains('+')) {
+      clean = clean.split('+')[0];
+    }
+    // 3. Quita espacios
+    return clean.trim();
+  }
+  // --- FIN FUNCIÓN ---
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final changelogAsync = ref.watch(changelogProvider);
@@ -38,6 +53,7 @@ class ChangelogScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: colors.surface,
       appBar: AppBar(
+        // Título dinámico
         title: changelogAsync.when(
           data: (release) => Text('Versión ${release.tagName}'),
           loading: () => const Text('Cargando...'),
@@ -46,10 +62,8 @@ class ChangelogScreen extends ConsumerWidget {
         backgroundColor: colors.surface,
         elevation: 0,
       ),
-
       body: changelogAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-
         error: (e, s) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
@@ -60,33 +74,35 @@ class ChangelogScreen extends ConsumerWidget {
             ),
           ),
         ),
-
         data: (release) {
           return localVersionAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-
             error: (e, s) =>
                 Center(child: Text("Error obteniendo versión local: $e")),
-
             data: (localVersion) {
-              final bool isLatest = localVersion == release.tagName;
+              // --- COMPARACIÓN ROBUSTA ---
+              final String cleanLocal = _cleanVersion(localVersion);
+              final String cleanRemote = _cleanVersion(release.tagName);
+
+              final bool isLatest = cleanLocal == cleanRemote;
+              // ---------------------------
 
               return ListView(
                 padding: const EdgeInsets.all(20.0),
                 children: [
-                  // 🔵 CAJA PRINCIPAL — Azul estilo Netflix PRO
+                  // 🔵 CAJA PRINCIPAL
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 350),
                     padding: const EdgeInsets.all(18.0),
                     decoration: BoxDecoration(
                       color: isLatest
-                          // ignore: deprecated_member_use
-                          ? Colors.blue.withOpacity(0.15)
-                          // ignore: deprecated_member_use
+                          ? Colors.green.withOpacity(
+                              0.15,
+                            ) // Verde si está actualizado
                           : Colors.blueAccent.withOpacity(0.20),
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(
-                        color: isLatest ? Colors.blue : Colors.lightBlueAccent,
+                        color: isLatest ? Colors.green : Colors.lightBlueAccent,
                         width: 1.3,
                       ),
                     ),
@@ -95,27 +111,23 @@ class ChangelogScreen extends ConsumerWidget {
                       children: [
                         Text(
                           isLatest
-                              ? 'Estás usando la última versión ($localVersion)'
+                              ? '¡Todo actualizado!'
                               : 'Nueva versión disponible: ${release.tagName}',
                           style: TextStyle(
                             fontSize: 19,
                             fontWeight: FontWeight.bold,
-                            color: isLatest
-                                ? Colors.blue[700]
-                                : Colors.blue[300],
+                            color: isLatest ? Colors.green : Colors.blue[300],
                           ),
                         ),
-
-                        if (!isLatest) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            'Tu versión instalada: $localVersion',
-                            style: TextStyle(
-                              color: Colors.blue[100],
-                              fontSize: 14,
-                            ),
+                        const SizedBox(height: 8),
+                        Text(
+                          // Mostramos la versión limpia para que se vea igual
+                          'Tu versión instalada: $cleanLocal',
+                          style: TextStyle(
+                            color: colors.onSurfaceVariant,
+                            fontSize: 14,
                           ),
-                        ],
+                        ),
 
                         const SizedBox(height: 16),
 
@@ -123,17 +135,22 @@ class ChangelogScreen extends ConsumerWidget {
                           onPressed: () {
                             _launchUrl(context, release.htmlUrl);
                           },
-                          icon: const Icon(Icons.download_rounded, size: 18),
+                          icon: Icon(
+                            isLatest
+                                ? Icons.open_in_new
+                                : Icons.download_rounded,
+                            size: 18,
+                          ),
                           label: Text(
                             isLatest
-                                ? 'Reinstalar desde GitHub'
+                                ? 'Ver en GitHub'
                                 : 'Descargar actualización',
                           ),
                           style: FilledButton.styleFrom(
                             minimumSize: const Size(double.infinity, 50),
                             backgroundColor: isLatest
-                                ? Colors.blue
-                                : Colors.lightBlueAccent,
+                                ? Colors.green
+                                : Colors.blue,
                           ),
                         ),
                       ],
@@ -142,7 +159,6 @@ class ChangelogScreen extends ConsumerWidget {
 
                   const SizedBox(height: 26),
 
-                  // 🔵 TÍTULO "Novedades"
                   Text(
                     'Novedades en esta versión',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -150,10 +166,8 @@ class ChangelogScreen extends ConsumerWidget {
                       color: Colors.blue[200],
                     ),
                   ),
-
                   const SizedBox(height: 14),
 
-                  // 🔵 CARD del Markdown
                   Container(
                     padding: const EdgeInsets.all(18.0),
                     decoration: BoxDecoration(
