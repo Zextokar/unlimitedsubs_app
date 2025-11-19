@@ -54,14 +54,6 @@ Una aplicación móvil moderna y fluida desarrollada en **Flutter** para el cons
 
 ---
 
-## 📸 Capturas de Pantalla
-
-| Inicio | Detalles de Serie | Búsqueda | Menú |
-|:---:|:---:|:---:|:---:|
-| *(Inserta aquí captura)* | *(Inserta aquí captura)* | *(Inserta aquí captura)* | *(Inserta aquí captura)* |
-
----
-
 ## 🚀 Instalación y Ejecución
 
 ### Requisitos Previos
