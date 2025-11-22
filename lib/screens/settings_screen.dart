@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
-import 'package:unlimitedsubs_app/theme/app_theme.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
 import 'about_screen.dart';
@@ -13,10 +12,12 @@ class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   Future<void> _launchUrl(BuildContext context, String urlString) async {
-    final Uri url = Uri.parse(urlString);
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
+    try {
+      final Uri url = Uri.parse(urlString);
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        throw 'Could not launch $urlString';
+      }
+    } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -31,79 +32,37 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final ThemeMode currentThemeMode = ref.watch(themeModeProvider);
-    final themeNotifier = ref.read(themeModeProvider.notifier);
-
-    final colors = Theme.of(context).colorScheme;
-
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        title: const Text('Configuración'),
         elevation: 0,
-        title: Row(
-          children: [
-            Container(
-              width: 4,
-              height: 24,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.blueAccent,
-                    Colors.lightBlueAccent.withOpacity(0.5),
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Text(
-              'Configuración',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 24,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
+        scrolledUnderElevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.surface,
       ),
-
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
-          // APARIENCIA
+          // --- APARIENCIA ---
           _SectionHeader("Apariencia"),
           _SettingsCard(
-            child: Column(
-              children: [
-                _SettingsTile(
-                  leading: Icon(
-                    currentThemeMode == ThemeMode.dark
-                        ? Icons.dark_mode_rounded
-                        : Icons.light_mode_rounded,
-                    color: Colors.blueAccent,
-                  ),
-                  title: 'Modo Oscuro',
-                  subtitle: 'Habilitar el tema oscuro de la aplicación',
-                  trailing: Switch(
-                    value: currentThemeMode == ThemeMode.dark,
-                    activeThumbColor: Colors.blueAccent,
-                    onChanged: (bool isDark) {
-                      themeNotifier.state = isDark
-                          ? ThemeMode.dark
-                          : ThemeMode.light;
-                    },
-                  ),
-                ),
-              ],
+            child: _SettingsTile(
+              leading: Icon(
+                Icons.dark_mode_rounded,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              title: 'Modo Oscuro',
+              subtitle: 'Habilitado por defecto',
+              trailing: Icon(
+                Icons.check_circle_rounded,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              onTap: null, // No hace nada porque es fijo
             ),
           ),
 
-          // DATOS Y ACTUALIZACIÓN
-          _SectionHeader("Datos y Actualización"),
+          // --- DATOS Y SISTEMA ---
+          _SectionHeader("Datos y Sistema"),
           _SettingsCard(
             child: Column(
               children: [
@@ -127,16 +86,14 @@ class SettingsScreen extends ConsumerWidget {
                     );
                   },
                 ),
-
                 Divider(height: 1, indent: 56, color: Colors.blueGrey.shade900),
-
                 _SettingsTile(
                   leading: const Icon(
                     Icons.sync_rounded,
                     color: Colors.lightBlueAccent,
                   ),
-                  title: 'Actualizar contenido',
-                  subtitle: 'Sincronizar catálogos y datos',
+                  title: 'Sincronizar catálogo',
+                  subtitle: 'Forzar recarga de datos',
                   trailing: Icon(
                     Icons.refresh_rounded,
                     color: Colors.blue[200],
@@ -144,37 +101,21 @@ class SettingsScreen extends ConsumerWidget {
                   onTap: () {
                     ref.invalidate(allDataProvider);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Row(
-                          children: [
-                            SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            const Text('Actualizando contenido...'),
-                          ],
-                        ),
-                        backgroundColor: Colors.blueGrey.shade900,
+                      const SnackBar(
+                        content: Text('Sincronizando catálogo...'),
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
                   },
                 ),
-
                 Divider(height: 1, indent: 56, color: Colors.blueGrey.shade900),
-
                 _SettingsTile(
                   leading: const Icon(
                     Icons.delete_sweep_rounded,
                     color: Colors.lightBlueAccent,
                   ),
                   title: 'Limpiar caché',
-                  subtitle: 'Borra imágenes guardadas',
+                  subtitle: 'Liberar espacio',
                   trailing: Icon(
                     Icons.chevron_right_rounded,
                     color: Colors.blue[200],
@@ -183,33 +124,17 @@ class SettingsScreen extends ConsumerWidget {
                     final bool? didConfirm = await showDialog(
                       context: context,
                       builder: (context) => AlertDialog(
-                        backgroundColor: Colors.black,
-                        icon: const Icon(
-                          Icons.delete_sweep_rounded,
-                          size: 32,
-                          color: Colors.lightBlueAccent,
-                        ),
-                        title: const Text(
-                          'Limpiar caché',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        content: Text(
-                          '¿Deseas borrar todo el caché? Las imágenes se volverán a descargar.',
-                          style: TextStyle(color: Colors.grey[400]),
+                        title: const Text('Confirmar'),
+                        content: const Text(
+                          '¿Borrar las imágenes guardadas? Se volverán a descargar si las necesitas.',
                         ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context, false),
-                            child: Text(
-                              'Cancelar',
-                              style: TextStyle(color: Colors.grey[400]),
-                            ),
+                            child: const Text('Cancelar'),
                           ),
                           FilledButton(
                             onPressed: () => Navigator.pop(context, true),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: Colors.lightBlueAccent,
-                            ),
                             child: const Text('Borrar'),
                           ),
                         ],
@@ -220,19 +145,10 @@ class SettingsScreen extends ConsumerWidget {
                       await DefaultCacheManager().emptyCache();
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Row(
-                              children: [
-                                const Icon(
-                                  Icons.check_circle_rounded,
-                                  color: Colors.white,
-                                ),
-                                const SizedBox(width: 12),
-                                const Text('Caché eliminado correctamente'),
-                              ],
-                            ),
-                            backgroundColor: Colors.blueAccent,
+                          const SnackBar(
+                            content: Text('Caché borrado correctamente'),
                             behavior: SnackBarBehavior.floating,
+                            backgroundColor: Colors.green,
                           ),
                         );
                       }
@@ -243,76 +159,89 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
 
-          // INFORMACIÓN
-          _SectionHeader("Información"),
+          // --- COMUNIDAD ---
+          _SectionHeader("Comunidad"),
           _SettingsCard(
             child: Column(
               children: [
                 _SettingsTile(
                   leading: const Icon(
-                    Icons.chat_bubble_rounded,
-                    color: Colors.lightBlueAccent,
+                    Icons.discord,
+                    color: Color(0xFF5865F2),
                   ),
-                  title: 'Enviar comentarios',
-                  subtitle: 'Comparte sugerencias o reporta errores',
-                  trailing: Icon(
+                  title: 'Discord Oficial',
+                  subtitle: 'Únete a la conversación',
+                  trailing: const Icon(
                     Icons.open_in_new_rounded,
                     size: 18,
-                    color: Colors.blue[200],
+                    color: Colors.grey,
                   ),
+                  onTap: () => _launchUrl(
+                    context,
+                    'https://discord.com/invite/5sqFs8K',
+                  ),
+                ),
+                Divider(height: 1, indent: 56, color: Colors.blueGrey.shade900),
+                _SettingsTile(
+                  leading: const Icon(
+                    Icons.public,
+                    color: Colors.lightBlueAccent,
+                  ),
+                  title: 'Sitio Web',
+                  subtitle: 'Visita unlimitedsubs',
+                  trailing: const Icon(
+                    Icons.open_in_new_rounded,
+                    size: 18,
+                    color: Colors.grey,
+                  ),
+                  onTap: () => _launchUrl(
+                    context,
+                    'https://subsunlimiteds.com/', // ¡PON TU LINK AQUÍ!
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // --- SOPORTE ---
+          _SectionHeader("Soporte"),
+          _SettingsCard(
+            child: Column(
+              children: [
+                _SettingsTile(
+                  leading: const Icon(
+                    Icons.bug_report_rounded,
+                    color: Colors.orangeAccent,
+                  ),
+                  title: 'Reportar un problema',
+                  subtitle: 'Enviar correo a soporte',
                   onTap: () {
                     final Uri emailUri = Uri(
                       scheme: 'mailto',
                       path: 'unlimitedsubs2@gmail.com',
-                      query: 'subject=Feedback UnlimitedSubs v1.0.0',
+                      query: 'subject=Bug Report - App v1.0.0',
                     );
                     _launchUrl(context, emailUri.toString());
                   },
                 ),
-
                 Divider(height: 1, indent: 56, color: Colors.blueGrey.shade900),
-
                 _SettingsTile(
                   leading: const Icon(
-                    Icons.code_rounded,
-                    color: Colors.lightBlueAccent,
-                  ),
-                  title: 'Licencias de código',
-                  subtitle: 'Bibliotecas de código abierto',
-                  trailing: Icon(
-                    Icons.chevron_right_rounded,
-                    color: Colors.blue[200],
-                  ),
-                  onTap: () {
-                    showLicensePage(
-                      context: context,
-                      applicationName: 'UnlimitedSubs',
-                      applicationVersion: '1.0.0',
-                    );
-                  },
-                ),
-
-                Divider(height: 1, indent: 56, color: Colors.blueGrey.shade900),
-
-                _SettingsTile(
-                  leading: const Icon(
-                    Icons.info_rounded,
+                    Icons.info_outline_rounded,
                     color: Colors.lightBlueAccent,
                   ),
                   title: 'Acerca de',
-                  subtitle: 'Información y créditos',
+                  subtitle: 'Créditos y versión',
                   trailing: Icon(
                     Icons.chevron_right_rounded,
                     color: Colors.blue[200],
                   ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const AboutScreen(),
-                      ),
-                    );
-                  },
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AboutScreen(),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -326,7 +255,7 @@ class SettingsScreen extends ConsumerWidget {
 }
 
 // -------------------
-// ESTILO VISUAL
+// WIDGETS DE ESTILO
 // -------------------
 
 class _SectionHeader extends StatelessWidget {
@@ -342,7 +271,7 @@ class _SectionHeader extends StatelessWidget {
         style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w700,
-          color: Colors.blueAccent,
+          color: Theme.of(context).colorScheme.primary,
           letterSpacing: 0.8,
         ),
       ),
@@ -357,13 +286,14 @@ class _SettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
+    return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.35),
+        // Usamos el color de tarjeta definido en el tema
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.blueGrey.shade900),
+        // Borde sutil para dar efecto premium
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
       child: ClipRRect(borderRadius: BorderRadius.circular(16), child: child),
     );
@@ -390,8 +320,6 @@ class _SettingsTile extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
-      splashColor: Colors.blueAccent.withOpacity(0.12),
-      highlightColor: Colors.blueAccent.withOpacity(0.06),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
@@ -413,7 +341,11 @@ class _SettingsTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: TextStyle(fontSize: 14, color: Colors.blueGrey[300]),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color:
+                          Colors.grey[400], // Color más suave para subtítulos
+                    ),
                   ),
                 ],
               ),

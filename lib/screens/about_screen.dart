@@ -1,7 +1,6 @@
 // lib/screens/about_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 class AboutScreen extends StatefulWidget {
@@ -44,13 +43,10 @@ class _AboutScreenState extends State<AboutScreen>
   Future<void> _loadAppVersion() async {
     final info = await PackageInfo.fromPlatform();
     setState(() {
-      version = "${info.version}+${info.buildNumber}";
+      version = info.version;
+      // Opcional: si quieres mostrar el número de compilación también:
+      // version = "${info.version} (${info.buildNumber})";
     });
-  }
-
-  Future<void> _launchUrl(String urlString) async {
-    final Uri url = Uri.parse(urlString);
-    await launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
   @override
@@ -64,151 +60,90 @@ class _AboutScreenState extends State<AboutScreen>
         title: const Text("Acerca de UnlimitedSubs"),
         centerTitle: true,
         elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+        titleTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
       ),
       body: FadeTransition(
         opacity: _fadeAnimation,
-        child: ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            // LOGO CON TARJETA PREMIUM
-            Center(
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF111A2B),
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.35),
-                      blurRadius: 25,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: Image.asset('assets/images/logo.jpg', height: 130),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // VERSIÓN
-            Text(
-              version.isEmpty ? "Cargando versión..." : "Versión $version",
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.white70,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-
-            const SizedBox(height: 32),
-
-            // TÍTULO
-            Text(
-              "Conéctate con nosotros",
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // BOTONES SOCIALES
-            _SocialPremiumButton(
-              icon: Icons.discord,
-              text: "Únete a nuestro Discord",
-              onTap: () => _launchUrl("https://discord.gg/TU_INVITACION"),
-              color: const Color(0xFF1F4AFF),
-            ),
-
-            _SocialPremiumButton(
-              icon: Icons.public,
-              text: "Visita nuestra Web",
-              onTap: () => _launchUrl("https://www.subsunlimited.com"),
-              color: const Color(0xFF1494F5),
-            ),
-
-            _SocialPremiumButton(
-              icon: Icons.facebook,
-              text: "Síguenos en Facebook",
-              onTap: () => _launchUrl("https://www.facebook.com/ULSubs"),
-              color: const Color(0xFF0059FF),
-            ),
-
-            const SizedBox(height: 40),
-
-            // FOOTER
-            Center(
-              child: Text(
-                "Hecho con ❤️ para la\ncomunidad Tokusatsu",
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.white60,
-                  height: 1.5,
-                  fontSize: 14.5,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SocialPremiumButton extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  final VoidCallback onTap;
-  final Color color;
-
-  const _SocialPremiumButton({
-    required this.icon,
-    required this.text,
-    required this.onTap,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Ink(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.20),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: color.withOpacity(0.38), width: 1.2),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.28),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(icon, color: Colors.white, size: 22),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  text,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // LOGO CON EFECTO DE SOMBRA
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF111A2B),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        // ignore: deprecated_member_use
+                        color: Colors.black.withOpacity(0.35),
+                        blurRadius: 25,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.asset('assets/images/logo.jpg', height: 150),
                   ),
                 ),
-              ),
-              const Icon(Icons.open_in_new, color: Colors.white70, size: 20),
-            ],
+
+                const SizedBox(height: 24),
+
+                // NOMBRE DE LA APP
+                Text(
+                  "UnlimitedSubs",
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                // VERSIÓN
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    // ignore: deprecated_member_use
+                    color: Colors.white.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    version.isEmpty ? "Cargando..." : "Versión $version",
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: Colors.blue[200],
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+
+                const Spacer(), // Empuja el footer hacia abajo
+                // FOOTER
+                Text(
+                  "Hecho con ❤️ para la\ncomunidad Tokusatsu",
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.white38,
+                    height: 1.5,
+                    fontSize: 14.0,
+                  ),
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
           ),
         ),
       ),

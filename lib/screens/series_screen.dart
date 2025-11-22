@@ -11,13 +11,11 @@ import '../models/serie.dart';
 class _CategoryItem {
   final String title;
   final IconData icon;
-  final String imagePath;
   final List<Serie> series;
 
   _CategoryItem({
     required this.title,
     required this.icon,
-    required this.imagePath,
     required this.series,
   });
 }
@@ -86,38 +84,33 @@ class SeriesScreen extends ConsumerWidget {
             _CategoryItem(
               title: 'Super Sentai',
               icon: Icons.shield_outlined,
-              imagePath: 'assets/images/logo_sentai.png',
               series: allData.superSentai,
             ),
             _CategoryItem(
               title: 'Kamen Rider',
               icon: Icons.motorcycle_outlined,
-              imagePath: 'assets/images/logo_rider.png',
               series: allData.kamenRider,
             ),
             _CategoryItem(
               title: 'Ultraman',
               icon: Icons.rocket_launch_outlined,
-              imagePath: 'assets/images/logo_ultraman.png',
               series: allData.ultraman,
             ),
             _CategoryItem(
               title: 'Garo',
               icon: Icons.nightlight_outlined,
-              imagePath: 'assets/images/logo_garo.png',
               series: allData.garoSeries,
             ),
             _CategoryItem(
               title: 'Off Topic',
               icon: Icons.explore_outlined,
-              imagePath: 'assets/images/logo_offtopic.png',
               series: allData.offTopic,
             ),
           ];
 
           return RefreshIndicator(
             color: Theme.of(context).colorScheme.primary,
-            backgroundColor: Colors.grey[900],
+            backgroundColor: const Color.fromARGB(255, 174, 174, 174),
             onRefresh: () async {
               // ignore: unused_result
               await ref.refresh(allDataProvider.future);
@@ -137,7 +130,6 @@ class SeriesScreen extends ConsumerWidget {
                 return CategoryCard(
                   title: category.title,
                   icon: category.icon,
-                  imagePath: category.imagePath,
                   onTap: () {
                     Navigator.push(
                       context,

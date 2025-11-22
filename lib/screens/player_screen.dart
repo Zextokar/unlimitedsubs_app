@@ -1,11 +1,8 @@
-// lib/screens/player_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
-// Importa el paquete de iOS
 import '../services/history_service.dart';
 
 class PlayerScreen extends ConsumerStatefulWidget {
@@ -47,12 +44,12 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageFinished: (String url) {
-            setState(() {
-              _isLoading = false;
-            });
+            setState(() => _isLoading = false);
           },
           onNavigationRequest: (NavigationRequest request) {
-            if (request.url.startsWith('https://vkvideo.ru/')) {
+            if (request.url.startsWith('https://vkvideo.ru/') ||
+                request.url.startsWith('https://vk.com/') ||
+                request.url.contains("ok.ru")) {
               return NavigationDecision.navigate;
             }
             return NavigationDecision.prevent;
@@ -60,7 +57,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         ),
       );
 
-    // Corrección: autoplay solo en Android
+    // Solo Android: permitir autoplay
     if (_controller.platform is AndroidWebViewController) {
       (_controller.platform as AndroidWebViewController)
           .setMediaPlaybackRequiresUserGesture(false);
@@ -85,28 +82,43 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     super.dispose();
   }
 
+  // ---------------------------------------------------------
+  // 🔥 convertLink() + toda la lógica de JS integrada aquí
+  // ---------------------------------------------------------
   Uri _buildEmbedUrl() {
-    String oid = '';
-    String id = '';
+    final url = widget.videoUrl;
+    final hash = widget.videoHash ?? "";
 
-    final regex = RegExp(r'video(-?\d+)_(\d+)');
-    final match = regex.firstMatch(widget.videoUrl);
+    // Caso 1: vk.com/video
+    if (url.contains("vk.com/video")) {
+      final parts = url.split("_");
+      final oidId = parts[0].split("video")[1];
+      final id = parts[1];
 
-    if (match != null && match.groupCount == 2) {
-      oid = match.group(1)!;
-      id = match.group(2)!;
-    } else {
-      return Uri.parse('about:blank');
+      return Uri.parse(
+        "https://vk.com/video_ext.php?oid=$oidId&id=$id&hash=$hash",
+      );
     }
 
-    String embedUrl =
-        'https://vkvideo.ru/video_ext.php?oid=$oid&id=$id&autoplay=1';
-
-    if (widget.videoHash != null && widget.videoHash!.isNotEmpty) {
-      embedUrl += '&hash=${widget.videoHash}';
+    // Caso 2: ok.ru/video
+    if (url.contains("ok.ru/video")) {
+      final videoId = url.split("video/")[1];
+      return Uri.parse("https://ok.ru/videoembed/$videoId");
     }
 
-    return Uri.parse(embedUrl);
+    // Caso 3: vkvideo.ru/video-
+    if (url.contains("vkvideo.ru/video-")) {
+      final parts = url.split("video-")[1].split("_");
+      final oid = "-${parts[0]}";
+      final id = parts[1];
+
+      return Uri.parse(
+        "https://vkvideo.ru/video_ext.php?oid=$oid&id=$id&hash=$hash",
+      );
+    }
+
+    // Si no coincide nada → dejar tal cual
+    return Uri.parse(url);
   }
 
   @override
@@ -117,7 +129,6 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
         fit: StackFit.expand,
         children: [
           WebViewWidget(controller: _controller),
-
           if (_isLoading)
             const Center(child: CircularProgressIndicator(color: Colors.white)),
         ],

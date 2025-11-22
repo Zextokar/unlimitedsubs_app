@@ -138,8 +138,7 @@ class LibraryBooksScreen extends ConsumerWidget {
                         title: libro.nombre,
                         imageUrl: libro.preview,
 
-
-                        aspectRatio: 2 / 3,
+                        aspectRatio: 4 / 3,
 
                         onTap: () => _launchUrl(libro.enlace),
                       ),

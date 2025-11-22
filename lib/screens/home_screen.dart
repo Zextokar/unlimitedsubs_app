@@ -12,7 +12,7 @@ import 'details_screen.dart';
 import 'player_screen.dart';
 import 'special_details_screen.dart';
 import 'movie_details_screen.dart';
-import 'special_one_cap_details_screen.dart'; // <-- ¡IMPORTANTE!
+import 'special_one_cap_details_screen.dart';
 
 import '../models/episodio_con_serie.dart';
 import '../models/episodio_especial_con_contexto.dart';
@@ -82,8 +82,37 @@ class HomeScreen extends ConsumerWidget {
           final heroBannerSeries = ref.watch(heroBannerProvider);
           final myList = ref.watch(myListProvider);
           final recentlyWatched = ref.watch(recentlyWatchedProvider);
-          final latestEpisodes = ref.watch(latestEpisodesProvider);
-          final latestSpecials = ref.watch(latestSpecialEpisodesProvider);
+          
+          // --- ¡CAMBIO AQUÍ! Ordenamiento Inteligente (Fecha + Número) ---
+          final latestEpisodes = ref.watch(latestEpisodesProvider).toList()
+            ..sort((a, b) {
+               // 1. Comparar Fechas (Más reciente primero)
+               final dateA = parseDate(a.episodio.releaseDate);
+               final dateB = parseDate(b.episodio.releaseDate);
+               final dateComparison = dateB.compareTo(dateA);
+               
+               if (dateComparison != 0) {
+                 return dateComparison; 
+               }
+               
+               // 2. Si la fecha es igual, comparar Número (Más alto primero)
+               return b.episodio.episodeNumber.compareTo(a.episodio.episodeNumber);
+            });
+
+          final latestSpecials = ref.watch(latestSpecialEpisodesProvider).toList()
+            ..sort((a, b) {
+               // Misma lógica para especiales
+               final dateA = parseDate(a.episodio.releaseDate);
+               final dateB = parseDate(b.episodio.releaseDate);
+               final dateComparison = dateB.compareTo(dateA);
+               
+               if (dateComparison != 0) {
+                 return dateComparison;
+               }
+               return b.episodio.episodeNumber.compareTo(a.episodio.episodeNumber);
+            });
+          // --- FIN CAMBIO ---
+
           final latestD2V = ref.watch(latestDirectToVideoProvider);
           final latestMovies = ref.watch(latestMoviesProvider);
           final latestMusic = ref.watch(latestMusicProvider);
@@ -173,7 +202,7 @@ class HomeScreen extends ConsumerWidget {
                           subtitle = data.serie.titleEN;
                           dateToCheck = data.episodio.releaseDate;
                           title =
-                              'Ep. ${data.episodio.episodeNumber}: ${data.episodio.episodeTitle}';
+                              'EP${data.episodio.episodeNumber}: ${data.episodio.episodeTitle}';
                           break;
                         case SearchItemType.episodioEspecial:
                           final data =
@@ -182,7 +211,7 @@ class HomeScreen extends ConsumerWidget {
                           subtitle = data.especial.titleEN;
                           dateToCheck = data.episodio.releaseDate;
                           title =
-                              'Ep. ${data.episodio.episodeNumber}: ${data.episodio.episodeTitle}';
+                              'EP${data.episodio.episodeNumber}: ${data.episodio.episodeTitle}';
                           break;
                         case SearchItemType.pelicula:
                           subtitle = 'Película';
@@ -218,7 +247,7 @@ class HomeScreen extends ConsumerWidget {
                     items: latestEpisodes,
                     cardBuilder: (data) => ContentCard(
                       title:
-                          'Ep. ${data.episodio.episodeNumber}: ${data.episodio.episodeTitle}',
+                          'EP${data.episodio.episodeNumber}: ${data.episodio.episodeTitle}',
                       subtitle: data.serie.titleEN,
                       imageUrl:
                           data.episodio.episodePreview ?? data.serie.poster,
@@ -266,7 +295,7 @@ class HomeScreen extends ConsumerWidget {
                     items: latestSpecials,
                     cardBuilder: (data) => ContentCard(
                       title:
-                          'Ep. ${data.episodio.episodeNumber}: ${data.episodio.episodeTitle}',
+                          'EP${data.episodio.episodeNumber}: ${data.episodio.episodeTitle}',
                       subtitle: data.especial.titleEN,
                       imageUrl:
                           data.episodio.episodePreview ?? data.especial.poster,
@@ -297,7 +326,6 @@ class HomeScreen extends ConsumerWidget {
                       imageUrl: data.poster,
                       isNew: _isNew(data.releaseDate2),
                       onTap: () {
-                        // --- ¡CAMBIO! Navega a Detalles ---
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -305,7 +333,6 @@ class HomeScreen extends ConsumerWidget {
                                 SpecialOneCapDetailsScreen(especial: data),
                           ),
                         );
-                        // --- FIN CAMBIO ---
                       }, aspectRatio: 16/9,
                     ),
                   ),
@@ -320,8 +347,6 @@ class HomeScreen extends ConsumerWidget {
                       imageUrl: data.poster,
                       isNew: _isNew(data.releaseDate2),
                       onTap: () {
-                        // --- ¡AQUÍ ESTABA EL ERROR, CORREGIDO! ---
-                        // Usamos la variable 'data' que viene del cardBuilder
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -329,7 +354,6 @@ class HomeScreen extends ConsumerWidget {
                                 MovieDetailsScreen(pelicula: data),
                           ),
                         );
-                        // --- FIN CORRECCIÓN ---
                       }, aspectRatio: 16/9,
                     ),
                   ),
@@ -369,7 +393,6 @@ class HomeScreen extends ConsumerWidget {
                       imageUrl: data.poster,
                       isNew: _isNew(data.releaseDate2),
                       onTap: () {
-                        // --- ¡CAMBIO! Navega a Detalles ---
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -377,7 +400,6 @@ class HomeScreen extends ConsumerWidget {
                                 SpecialOneCapDetailsScreen(especial: data),
                           ),
                         );
-                        // --- FIN CAMBIO ---
                       }, aspectRatio: 16/9,
                     ),
                   ),
@@ -417,10 +439,8 @@ class HomeScreen extends ConsumerWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            // --- ¡CAMBIO! Navegación a Detalles ---
             builder: (context) =>
                 SpecialOneCapDetailsScreen(especial: especial),
-            // --- FIN CAMBIO ---
           ),
         );
         break;
@@ -487,7 +507,8 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-// ... (Los widgets _HeroBanner, _HeroBannerCard y _HomeGridSection siguen igual, puedes pegarlos aquí si no los tienes en otro archivo)
+// ... (Resto de widgets auxiliares igual) ...
+
 class _HeroBanner extends ConsumerStatefulWidget {
   final List<Serie> series;
   final bool Function(dynamic) isNewCheck;

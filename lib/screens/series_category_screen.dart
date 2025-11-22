@@ -141,7 +141,7 @@ class SeriesCategoryScreen extends StatelessWidget {
                             ),
                           );
                         },
-                        aspectRatio: 2 / 3,
+                        aspectRatio: 16 / 9,
                       );
                     }).toList(),
                   ),
